@@ -15,12 +15,12 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
     });
   }, 5000);
 
-  // Periodically check for updates every hour
+  // Periodically check for updates every 30 seconds
   setInterval(() => {
     autoUpdater.checkForUpdates().catch(err => {
       console.error('[Updater] Background periodic update check failed:', err.message);
     });
-  }, 60 * 60 * 1000); // 1 hour in milliseconds
+  }, 30 * 1000); // 30 seconds in milliseconds
 
   // Helper to send events to Renderer
   function sendUpdateStatus(channel: string, data: any = {}) {
