@@ -42,7 +42,7 @@ jobs:
 
       - name: Package App and Publish Release Artifacts
         env:
-          # Token required to push releases to the private GitHub repository
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Token required to push releases to the public releases repository
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           npx electron-builder --publish always
