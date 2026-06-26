@@ -2,11 +2,25 @@ import { ipcMain, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
 
 export function setupAutoUpdater(mainWindow: BrowserWindow) {
-  // Configure logging if needed (optional)
+  // Configure logging
   autoUpdater.logger = console;
   
-  // Set auto-download to false so the user has control
-  autoUpdater.autoDownload = false;
+  // Set auto-download to true for silent background updates
+  autoUpdater.autoDownload = true;
+
+  // Run update check automatically 5 seconds after startup
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('[Updater] Background startup update check failed:', err.message);
+    });
+  }, 5000);
+
+  // Periodically check for updates every hour
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('[Updater] Background periodic update check failed:', err.message);
+    });
+  }, 60 * 60 * 1000); // 1 hour in milliseconds
 
   // Helper to send events to Renderer
   function sendUpdateStatus(channel: string, data: any = {}) {
