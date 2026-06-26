@@ -624,22 +624,51 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
               </Select>
             </div>
             
-            <div className="space-y-1.5 relative">
+            <div className="space-y-2">
               <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex justify-between">
-                <span>Category Target(s)</span>
-                {fetchingCategories && <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />}
+                <span>Category Target(s) (Select one or more)</span>
+                {fetchingCategories && <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-400" />}
               </label>
               
-              <div className="relative flex items-center">
+              {/* Scrollable Box showing all categories directly */}
+              <div className="border border-zinc-800 bg-zinc-950 rounded-lg p-3 max-h-48 overflow-y-auto space-y-2.5">
+                {fetchingCategories ? (
+                  <p className="text-zinc-500 text-[11px] italic py-1">Fetching categories from WordPress...</p>
+                ) : categories.length === 0 ? (
+                  <p className="text-zinc-500 text-[11px] italic py-1">No categories found on connected site.</p>
+                ) : (
+                  categories.map((cat) => {
+                    const isChecked = selectedCategories.includes(cat.name);
+                    return (
+                      <label 
+                        key={cat.id} 
+                        className="flex items-center space-x-2.5 text-xs text-zinc-300 hover:text-zinc-100 cursor-pointer select-none transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {
+                            if (isChecked) {
+                              setSelectedCategories(prev => prev.filter(c => c !== cat.name));
+                            } else {
+                              setSelectedCategories(prev => Array.from(new Set([...prev, cat.name])));
+                            }
+                          }}
+                          className="rounded border-zinc-800 bg-zinc-950 text-indigo-600 focus:ring-indigo-500/30 h-4.5 w-4.5 accent-indigo-600 cursor-pointer"
+                        />
+                        <span className="font-medium">{cat.name}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Add Custom Category Field */}
+              <div className="flex gap-2 pt-1">
                 <Input 
-                  placeholder={fetchingCategories ? "Fetching categories from WordPress..." : "Search categories or type custom & press Enter..."}
+                  placeholder="Or type custom category & press Add/Enter..."
                   value={categoryQuery} 
-                  onChange={(e) => {
-                    setCategoryQuery(e.target.value);
-                    setDropdownOpen(true);
-                  }}
-                  onFocus={() => setDropdownOpen(true)}
-                  onBlur={() => setTimeout(() => setDropdownOpen(false), 250)}
+                  onChange={(e) => setCategoryQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -649,52 +678,32 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
                       }
                     }
                   }}
-                  className="bg-zinc-950 border-zinc-800 pr-10 text-xs w-full"
+                  className="bg-zinc-950 border-zinc-800 text-xs flex-1 h-9"
                 />
-                <button
+                <Button
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // Prevent input blur
-                    setDropdownOpen(!dropdownOpen);
+                  onClick={() => {
+                    if (categoryQuery.trim()) {
+                      setSelectedCategories(prev => Array.from(new Set([...prev, categoryQuery.trim()])));
+                      setCategoryQuery('');
+                    }
                   }}
-                  className="absolute right-3 text-zinc-500 hover:text-zinc-300"
+                  className="bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 text-zinc-300 text-xs px-3 h-9"
                 >
-                  <ChevronDown className="h-4 w-4" />
-                </button>
+                  Add
+                </Button>
               </div>
-
-              {dropdownOpen && categories.length > 0 && (
-                <div className="absolute z-[100] w-full mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl max-h-40 overflow-y-auto">
-                  {categories
-                    .filter(cat => cat.name.toLowerCase().includes(categoryQuery.toLowerCase()))
-                    .map(cat => (
-                      <div
-                        key={cat.id}
-                        onMouseDown={() => {
-                          setSelectedCategories(prev => Array.from(new Set([...prev, cat.name])));
-                          setCategoryQuery('');
-                          setDropdownOpen(false);
-                        }}
-                        className="px-3 py-2 text-xs text-zinc-300 hover:bg-indigo-600 hover:text-white cursor-pointer transition-colors flex justify-between items-center"
-                      >
-                        <span>{cat.name}</span>
-                        {selectedCategories.includes(cat.name) && <span className="text-[10px] text-emerald-400 font-bold">✓ Selected</span>}
-                      </div>
-                    ))
-                  }
-                  {categories.filter(cat => cat.name.toLowerCase().includes(categoryQuery.toLowerCase())).length === 0 && (
-                    <div className="px-3 py-2 text-[11px] text-zinc-500 italic">
-                      No matching WordPress categories. Press Enter to add custom.
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Badges for selected categories */}
               {selectedCategories.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-2">
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-[10px] font-bold text-zinc-500 self-center uppercase tracking-wider mr-1">Selected:</span>
                   {selectedCategories.map((cat, idx) => (
-                    <Badge key={idx} variant="secondary" className="flex items-center space-x-1 text-[10px] py-0.5 px-2 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                    <Badge 
+                      key={idx} 
+                      variant="secondary" 
+                      className="flex items-center space-x-1 text-[10px] py-0.5 px-2 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
+                    >
                       <span>{cat}</span>
                       <button 
                         type="button" 
@@ -942,6 +951,9 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
     setFormError('');
     setStep(1);
     setOpenAdd(true);
+    if (websiteId) {
+      fetchCategories(websiteId);
+    }
   };
 
   return (
