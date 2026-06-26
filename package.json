@@ -1,5 +1,5 @@
 {
-  "name": "stackorbitai-bulk-writer-pro",
+  "name": "wordpress-autopilot-bulk-article-writer-pro",
   "version": "1.0.11",
   "description": "StackOrbitAI Bulk Writer Pro - Enterprise AI Bulk Blog Writer",
   "main": "dist/main/index.js",
@@ -69,7 +69,7 @@
       "publish": {
         "provider": "github",
         "owner": "StackOrbitAI",
-        "repo": "stackorbitai-bulk-writer-pro",
+        "repo": "wordpress-autopilot-bulk-article-writer-pro",
         "private": false
       }
     },
@@ -80,7 +80,7 @@
       "publish": {
         "provider": "github",
         "owner": "StackOrbitAI",
-        "repo": "stackorbitai-bulk-writer-pro",
+        "repo": "wordpress-autopilot-bulk-article-writer-pro",
         "private": false
       }
     },

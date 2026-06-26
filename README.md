@@ -1,4 +1,4 @@
-# StackOrbitAI Bulk Writer Pro
+# 🚀 WordPress Autopilot Bulk Article Writer Pro — AI-Powered Bulk Post Generator & Auto-Scheduler
 
 StackOrbitAI Bulk Writer Pro is a production-ready, enterprise-grade cross-platform desktop application (Windows and macOS) built for automated, high-quality, bulk WordPress article generation and publishing. 
 
