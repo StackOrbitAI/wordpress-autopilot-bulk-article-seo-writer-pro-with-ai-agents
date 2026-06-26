@@ -12,6 +12,7 @@ import {
   FileSpreadsheet, 
   ChevronRight, 
   ChevronLeft, 
+  ChevronDown,
   AlertTriangle,
   MonitorPlay,
   FileText,
@@ -104,6 +105,9 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
     try {
       const cats = await api.getWordPressCategories(parseInt(siteId, 10));
       setCategories(cats || []);
+      if (cats && cats.length > 0) {
+        setDropdownOpen(true);
+      }
     } catch (err) {
       console.error('Failed to fetch categories:', err);
       setCategories([]);
@@ -626,7 +630,7 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
                 {fetchingCategories && <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />}
               </label>
               
-              <div className="relative">
+              <div className="relative flex items-center">
                 <Input 
                   placeholder={fetchingCategories ? "Fetching categories from WordPress..." : "Search categories or type custom & press Enter..."}
                   value={categoryQuery} 
@@ -645,8 +649,18 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
                       }
                     }
                   }}
-                  className="bg-zinc-950 border-zinc-800 pr-8 text-xs"
+                  className="bg-zinc-950 border-zinc-800 pr-10 text-xs w-full"
                 />
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // Prevent input blur
+                    setDropdownOpen(!dropdownOpen);
+                  }}
+                  className="absolute right-3 text-zinc-500 hover:text-zinc-300"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
               </div>
 
               {dropdownOpen && categories.length > 0 && (

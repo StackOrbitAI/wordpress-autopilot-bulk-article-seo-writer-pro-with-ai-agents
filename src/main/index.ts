@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, Menu, MenuItem } from 'electron';
 import path from 'path';
 import { initDatabase, closeDatabase, dbAll, dbRun, dbGet } from './database/connection';
 import { encrypt, decrypt } from './services/security';
@@ -39,6 +39,21 @@ function createWindow() {
     mainWindow?.show();
   });
 
+  // Enable right-click context menu (Cut, Copy, Paste, Select All) in input fields
+  mainWindow.webContents.on('context-menu', (_e, params) => {
+    const contextMenu = new Menu();
+    if (params.isEditable) {
+      contextMenu.append(new MenuItem({ label: 'Cut', role: 'cut' }));
+      contextMenu.append(new MenuItem({ label: 'Copy', role: 'copy' }));
+      contextMenu.append(new MenuItem({ label: 'Paste', role: 'paste' }));
+      contextMenu.append(new MenuItem({ label: 'Select All', role: 'selectAll' }));
+      contextMenu.popup({ window: mainWindow! });
+    } else if (params.selectionText && params.selectionText.trim() !== '') {
+      contextMenu.append(new MenuItem({ label: 'Copy', role: 'copy' }));
+      contextMenu.popup({ window: mainWindow! });
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -49,6 +64,56 @@ function createWindow() {
 
 // 1. Electron Lifecycle
 app.whenReady().then(async () => {
+  // Setup standard application menu to enable keyboard copy/paste/undo/redo shortcuts
+  const template: any[] = [
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'pasteandmatchstyle' },
+        { role: 'delete' },
+        { role: 'selectall' }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forcereload' },
+        { role: 'toggledevtools' },
+        { type: 'separator' },
+        { role: 'resetzoom' },
+        { role: 'zoomin' },
+        { role: 'zoomout' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        ...(process.platform === 'darwin' ? [
+          { type: 'separator' },
+          { role: 'front' },
+          { type: 'separator' },
+          { role: 'window' }
+        ] : [
+          { role: 'close' }
+        ])
+      ]
+    }
+  ];
+
+  const appMenu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(appMenu);
+
   // Initialize Database
   await initDatabase();
 
