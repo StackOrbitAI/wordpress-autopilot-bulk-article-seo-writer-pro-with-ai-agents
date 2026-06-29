@@ -32,6 +32,18 @@ interface ChangelogEntry {
 
 const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.0.52',
+    date: '2026-06-29',
+    type: 'major',
+    changes: [
+      'Added the new AI Agents Hub featuring live WordPress article & category optimization tools.',
+      'Implemented customizable internal and outbound reference links count density controls.',
+      'Prepend RankMath / Yoast compatible SEO metadata tables at the top of uploaded Google Docs.',
+      'Added automated image credits and disclaimer blocks at the bottom of generated posts.',
+      'Introduced direct static layout page creation templates (About Us, Contact Us, Privacy Policy).'
+    ]
+  },
+  {
     version: '1.0.51',
     date: '2026-06-29',
     type: 'feature',
