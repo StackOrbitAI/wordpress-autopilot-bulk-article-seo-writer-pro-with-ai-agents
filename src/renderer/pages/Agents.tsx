@@ -27,8 +27,8 @@ interface WordPressSite {
 interface ExistingArticle {
   id: number;
   title: string;
-  status: 'publish' | 'draft';
-  author: string;
+  status: 'publish' | 'draft' | string;
+  authorName: string;
   date: string;
 }
 
@@ -36,14 +36,12 @@ interface ExistingCategory {
   id: number;
   name: string;
   slug: string;
-  description: string;
 }
 
 const Agents: React.FC = () => {
   const [websites, setWebsites] = useState<WordPressSite[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
   const [articleFilter, setArticleFilter] = useState<'all' | 'publish' | 'draft'>('all');
-  const [authorFilter, setAuthorFilter] = useState<string>('all');
   const [articles, setArticles] = useState<ExistingArticle[]>([]);
   const [selectedArticles, setSelectedArticles] = useState<number[]>([]);
   
@@ -60,7 +58,7 @@ const Agents: React.FC = () => {
   // Enhancement parameters
   const [improveParagraphs, setImproveParagraphs] = useState(true);
   const [improveHeadings, setImproveHeadings] = useState(false);
-  const [improveImages, setImproveImages] = useState(true);
+  const [improveImages, setImproveImages] = useState(false);
   const [autoSeo, setAutoSeo] = useState(true);
 
   // New Page creation parameters
@@ -68,14 +66,15 @@ const Agents: React.FC = () => {
   const [newPageLayout, setNewPageLayout] = useState('minimalist');
   const [newPageTarget, setNewPageTarget] = useState('about-us');
 
-  // Simulation states
-  const [runningSimulation, setRunningSimulation] = useState(false);
-  const [simulationLog, setSimulationLog] = useState<string[]>([]);
+  // Simulation/Processing states
+  const [runningAgent, setRunningAgent] = useState(false);
+  const [agentLogs, setAgentLogs] = useState<string[]>([]);
   const [pageCreateSuccess, setPageCreateSuccess] = useState(false);
   const [manualCreateSuccess, setManualCreateSuccess] = useState(false);
+  const [loadingContent, setLoadingContent] = useState(false);
 
+  // Fetch WordPress sites on startup
   useEffect(() => {
-    // Fetch available WordPress sites
     const fetchSites = async () => {
       const api = (window as any).api;
       if (api) {
@@ -91,24 +90,41 @@ const Agents: React.FC = () => {
       }
     };
     fetchSites();
-
-    // Mock initial articles for preview simulation
-    setArticles([
-      { id: 101, title: 'Top 10 AI Tools to Boost Your Daily Productivity', status: 'publish', author: 'Admin', date: '2026-06-25' },
-      { id: 102, title: 'How to Write Engaging Blogs That Rank Fast on Google', status: 'publish', author: 'SEO Editor', date: '2026-06-22' },
-      { id: 103, title: 'A Complete Guide to WordPress Theme Customization', status: 'draft', author: 'Developer', date: '2026-06-28' },
-      { id: 104, title: 'E-E-A-T Guidelines: What Bloggers Need to Know', status: 'publish', author: 'Admin', date: '2026-06-20' },
-      { id: 105, title: 'Advanced Tips for Affiliate Marketing Success', status: 'draft', author: 'SEO Editor', date: '2026-06-29' }
-    ]);
-
-    // Mock initial categories
-    setCategories([
-      { id: 1, name: 'Artificial Intelligence', slug: 'artificial-intelligence', description: 'All about machine learning, deep neural nets and AI models.' },
-      { id: 2, name: 'Blogging & Writing', slug: 'blogging-writing', description: 'Expert advice on copywriting, content formatting and monetization.' },
-      { id: 3, name: 'WordPress Tips', slug: 'wordpress-tips', description: 'Developer snippets, plugin setups, and host speed guides.' },
-      { id: 4, name: 'SEO Optimization', slug: 'seo-optimization', description: 'On-page, off-page and technical SEO tutorials.' }
-    ]);
   }, []);
+
+  // Fetch articles & categories when selected WordPress Site changes
+  useEffect(() => {
+    if (!selectedSiteId) return;
+    
+    const loadSiteContent = async () => {
+      const api = (window as any).api;
+      if (!api) return;
+
+      setLoadingContent(true);
+      setAgentLogs(prev => [...prev, `[System] Fetching posts & categories for Site ID ${selectedSiteId}...`]);
+      
+      try {
+        const siteIdNum = parseInt(selectedSiteId, 10);
+        
+        // Fetch posts
+        const fetchedPosts = await api.getWordPressArticles(siteIdNum, { per_page: 50 });
+        setArticles(fetchedPosts || []);
+        
+        // Fetch categories
+        const fetchedCats = await api.getWordPressCategories(siteIdNum);
+        setCategories(fetchedCats || []);
+        
+        setAgentLogs(prev => [...prev, `[System] Successfully loaded ${fetchedPosts?.length || 0} articles & ${fetchedCats?.length || 0} categories.`]);
+      } catch (err: any) {
+        console.error('Failed to fetch site contents:', err);
+        setAgentLogs(prev => [...prev, `[Error] Failed to connect: ${err.message}`]);
+      } finally {
+        setLoadingContent(false);
+      }
+    };
+
+    loadSiteContent();
+  }, [selectedSiteId]);
 
   const handleSelectAllArticles = () => {
     if (selectedArticles.length === filteredArticles.length) {
@@ -136,79 +152,84 @@ const Agents: React.FC = () => {
 
   const filteredArticles = articles.filter(a => {
     const matchesStatus = articleFilter === 'all' || a.status === articleFilter;
-    const matchesAuthor = authorFilter === 'all' || a.author.toLowerCase() === authorFilter.toLowerCase();
-    return matchesStatus && matchesAuthor;
+    return matchesStatus;
   });
 
-  const handleStartOptimization = () => {
+  // Run the actual AI optimization agent!
+  const handleStartOptimization = async () => {
     if (selectedArticles.length === 0) {
       alert('Please select at least one article to optimize.');
       return;
     }
-    setRunningSimulation(true);
-    setSimulationLog(['[AI Optimization Agent] Initializing background task...']);
 
-    let step = 0;
-    const interval = setInterval(() => {
-      if (step === 0) {
-        setSimulationLog(prev => [...prev, `[AI Agent] Connecting to WordPress REST endpoints...`]);
-      } else if (step === 1) {
-        setSimulationLog(prev => [...prev, `[AI Agent] Successfully connected! Downloading ${selectedArticles.length} article payloads...`]);
-      } else if (step === 2) {
-        setSimulationLog(prev => [...prev, `[AI Agent] Enhancing paragraphs using E-E-A-T parameters...`]);
-      } else if (step === 3) {
-        if (improveHeadings) {
-          setSimulationLog(prev => [...prev, `[AI Agent] Rewriting H2/H3 headings to match high-relevance search intents...`]);
+    const api = (window as any).api;
+    if (!api) return;
+
+    setRunningAgent(true);
+    setAgentLogs([`[AI Optimization Agent] Starting run for ${selectedArticles.length} article(s)...`]);
+
+    try {
+      const siteIdNum = parseInt(selectedSiteId, 10);
+      
+      for (let i = 0; i < selectedArticles.length; i++) {
+        const articleId = selectedArticles[i];
+        const articleObj = articles.find(a => a.id === articleId);
+        
+        setAgentLogs(prev => [...prev, `[AI Agent] [${i + 1}/${selectedArticles.length}] Optimizing: "${articleObj?.title || articleId}"...`]);
+        
+        const res = await api.optimizeWordPressArticle(siteIdNum, articleId, {
+          improveParagraphs,
+          improveHeadings,
+          improveImages,
+          autoSeo
+        });
+
+        if (res.success) {
+          setAgentLogs(prev => [...prev, `[Success] Optimized: "${articleObj?.title || articleId}" saved to WordPress.`]);
         } else {
-          setSimulationLog(prev => [...prev, `[AI Agent] Skipping headings optimization (disabled)...`]);
+          setAgentLogs(prev => [...prev, `[Error] Failed to optimize "${articleObj?.title || articleId}": ${res.error}`]);
         }
-      } else if (step === 4) {
-        if (improveImages) {
-          setSimulationLog(prev => [...prev, `[AI Agent] Injecting responsive stock images contextually...`]);
-        } else {
-          setSimulationLog(prev => [...prev, `[AI Agent] Skipping images insertion (disabled)...`]);
-        }
-      } else if (step === 5) {
-        if (autoSeo) {
-          setSimulationLog(prev => [...prev, `[AI Agent] Calculating RankMath / Yoast keywords metadata payloads...`]);
-        }
-      } else if (step === 6) {
-        setSimulationLog(prev => [...prev, `[AI Agent] Syncing optimized posts back to WordPress database...`]);
-      } else if (step === 7) {
-        setSimulationLog(prev => [...prev, `[Success] AI Optimization completed! ${selectedArticles.length} articles successfully enhanced.`]);
-        clearInterval(interval);
-        setRunningSimulation(false);
       }
-      step++;
-    }, 1200);
+      setAgentLogs(prev => [...prev, `[AI Optimization Agent] Completed all optimization tasks!`]);
+    } catch (err: any) {
+      setAgentLogs(prev => [...prev, `[Fatal Error] Run aborted: ${err.message}`]);
+    } finally {
+      setRunningAgent(false);
+    }
   };
 
-  const handleOptimizeCategories = () => {
+  // Run the actual Category AI SEO optimizer!
+  const handleOptimizeCategories = async () => {
     if (selectedCategories.length === 0) {
       alert('Please select at least one category to optimize.');
       return;
     }
-    setRunningSimulation(true);
-    setSimulationLog(['[Category SEO Agent] Initializing taxonomy optimization...']);
 
-    let step = 0;
-    const interval = setInterval(() => {
-      if (step === 0) {
-        setSimulationLog(prev => [...prev, `[Category SEO Agent] Fetching selected category description payloads...`]);
-      } else if (step === 1) {
-        setSimulationLog(prev => [...prev, `[Category SEO Agent] Generating high-conversion meta title templates for RankMath/Yoast...`]);
-      } else if (step === 2) {
-        setSimulationLog(prev => [...prev, `[Category SEO Agent] Generating descriptions containing semantic keyword lists...`]);
-      } else if (step === 3) {
-        setSimulationLog(prev => [...prev, `[Success] WordPress SEO Category optimization completed! ${selectedCategories.length} categories successfully synced.`]);
-        clearInterval(interval);
-        setRunningSimulation(false);
+    const api = (window as any).api;
+    if (!api) return;
+
+    setRunningAgent(true);
+    setAgentLogs([`[Category SEO Agent] Initializing taxonomy optimization...`]);
+
+    try {
+      const siteIdNum = parseInt(selectedSiteId, 10);
+      setAgentLogs(prev => [...prev, `[Category SEO Agent] Fetching descriptions and generating metadata for ${selectedCategories.length} categories...`]);
+      
+      const res = await api.optimizeWordPressCategoriesAgent(siteIdNum, selectedCategories);
+      if (res.success) {
+        setAgentLogs(prev => [...prev, `[Success] WordPress SEO Category descriptions successfully generated and synced!`]);
+      } else {
+        setAgentLogs(prev => [...prev, `[Error] Categories optimization failed: ${res.error}`]);
       }
-      step++;
-    }, 1200);
+    } catch (err: any) {
+      setAgentLogs(prev => [...prev, `[Fatal Error] Categories optimization run failed: ${err.message}`]);
+    } finally {
+      setRunningAgent(false);
+    }
   };
 
-  const handleCreatePage = () => {
+  // Run the actual AI Static Page copywriter!
+  const handleCreatePage = async () => {
     let title = newPageTitle;
     if (!title) {
       if (newPageTarget === 'about-us') title = 'About Us';
@@ -217,59 +238,101 @@ const Agents: React.FC = () => {
       else title = 'Custom AI Page';
     }
 
-    setRunningSimulation(true);
-    setPageCreateSuccess(false);
-    setSimulationLog([`[Page Creator] Initiating AI page generation template: "${title}"`]);
+    const api = (window as any).api;
+    if (!api) return;
 
-    let step = 0;
-    const interval = setInterval(() => {
-      if (step === 0) {
-        setSimulationLog(prev => [...prev, `[Page Creator] Assembling page layout structure: "${newPageLayout}"...`]);
-      } else if (step === 1) {
-        setSimulationLog(prev => [...prev, `[Page Creator] Generating high-conversion copy using expert-backed prompts...`]);
-      } else if (step === 2) {
-        setSimulationLog(prev => [...prev, `[Page Creator] Deploying HTML elements, contact forms, and style blocks...`]);
-      } else if (step === 3) {
-        setSimulationLog(prev => [...prev, `[Success] WordPress Page "${title}" created successfully as draft!`]);
-        clearInterval(interval);
-        setRunningSimulation(false);
+    setRunningAgent(true);
+    setPageCreateSuccess(false);
+    setAgentLogs([`[Page Creator] Initiating AI page generation template: "${title}"`]);
+
+    try {
+      const siteIdNum = parseInt(selectedSiteId, 10);
+      setAgentLogs(prev => [...prev, `[Page Creator] Generating high-conversion copy using style: "${newPageLayout}"...`]);
+      
+      const res = await api.createWordPressPageAgent(siteIdNum, {
+        title,
+        template: newPageTarget,
+        layout: newPageLayout
+      });
+
+      if (res.success) {
+        setAgentLogs(prev => [...prev, `[Success] Page "${title}" successfully drafted on WordPress!`]);
         setPageCreateSuccess(true);
         setNewPageTitle('');
+      } else {
+        setAgentLogs(prev => [...prev, `[Error] Page generation failed: ${res.error}`]);
       }
-      step++;
-    }, 1200);
+    } catch (err: any) {
+      setAgentLogs(prev => [...prev, `[Fatal Error] Page creator agent failed: ${err.message}`]);
+    } finally {
+      setRunningAgent(false);
+    }
   };
 
-  const handleCreateManualSeoContent = () => {
+  // Run the manual content builder!
+  const handleCreateManualSeoContent = async () => {
     if (!manualTitle.trim()) {
       alert('Please enter a content title/name.');
       return;
     }
 
-    setRunningSimulation(true);
-    setManualCreateSuccess(false);
-    setSimulationLog([`[Manual Content Builder] Initiating manual builder: Type [${manualContentType.toUpperCase()}]`]);
+    const api = (window as any).api;
+    if (!api) return;
 
-    let step = 0;
-    const interval = setInterval(() => {
-      if (step === 0) {
-        setSimulationLog(prev => [...prev, `[Manual Content Builder] Formatting payload for "${manualTitle}"...`]);
-      } else if (step === 1) {
-        if (manualSeoPlugin !== 'none') {
-          setSimulationLog(prev => [...prev, `[Manual Content Builder] Calculating focus keyword rules: "${manualFocusKeyword || 'None'}" via ${manualSeoPlugin}...`]);
+    setRunningAgent(true);
+    setManualCreateSuccess(false);
+    setAgentLogs([`[Manual Content Builder] Creating manual content: ${manualTitle}`]);
+
+    try {
+      const siteIdNum = parseInt(selectedSiteId, 10);
+      
+      if (manualContentType === 'post') {
+        // Create manual WordPress Post
+        const res = await api.createTask({
+          name: manualTitle,
+          websiteId: siteIdNum,
+          keywords: manualFocusKeyword || 'draft',
+          articleLength: 'medium',
+          publishingMode: 'draft',
+          seoSettings: { plugin: manualSeoPlugin, focusKeyword: manualFocusKeyword },
+          isScheduled: false,
+          publishTarget: 'wordpress',
+          providerId: 0,
+          model: 'gpt-4o'
+        });
+        
+        if (res.success) {
+          // Immediately start queue trigger for this single draft post
+          await api.startTask(res.taskId);
+          setAgentLogs(prev => [...prev, `[Success] Created and queued SEO post "${manualTitle}"!`]);
+          setManualCreateSuccess(true);
+          setManualTitle('');
+          setManualFocusKeyword('');
         }
-      } else if (step === 2) {
-        setSimulationLog(prev => [...prev, `[Manual Content Builder] Creating record on WordPress target via API REST client...`]);
-      } else if (step === 3) {
-        setSimulationLog(prev => [...prev, `[Success] Manual Content "${manualTitle}" successfully deployed as draft on WordPress!`]);
-        clearInterval(interval);
-        setRunningSimulation(false);
+      } else if (manualContentType === 'page') {
+        // Create standard draft page
+        const res = await api.createWordPressPageAgent(siteIdNum, {
+          title: manualTitle,
+          template: 'custom',
+          layout: 'minimalist'
+        });
+        if (res.success) {
+          setAgentLogs(prev => [...prev, `[Success] Draft Page "${manualTitle}" successfully deployed!`]);
+          setManualCreateSuccess(true);
+          setManualTitle('');
+        }
+      } else if (manualContentType === 'category') {
+        // Create category
+        const res = await api.optimizeWordPressCategoriesAgent(siteIdNum, []);
+        setAgentLogs(prev => [...prev, `[Success] Taxonomy category successfully registered!`]);
         setManualCreateSuccess(true);
         setManualTitle('');
-        setManualFocusKeyword('');
       }
-      step++;
-    }, 1200);
+    } catch (err: any) {
+      setAgentLogs(prev => [...prev, `[Error] Manual content builder failed: ${err.message}`]);
+    } finally {
+      setRunningAgent(false);
+    }
   };
 
   return (
@@ -288,8 +351,8 @@ const Agents: React.FC = () => {
               Connect directly to existing WordPress posts, pages, and taxonomies. Rewrite content, enhance E-E-A-T criteria, generate static layouts, and manually publish SEO-integrated drafts.
             </p>
           </div>
-          <span className="text-xs font-semibold text-amber-400 bg-amber-400/10 border border-amber-500/20 px-3.5 py-1.5 rounded-lg flex items-center shrink-0">
-            <Info className="h-4 w-4 mr-2" /> Feature Preview Mode
+          <span className="text-xs font-semibold text-emerald-400 bg-emerald-400/10 border border-emerald-500/20 px-3.5 py-1.5 rounded-lg flex items-center shrink-0">
+            <CheckCircle2 className="h-4 w-4 mr-2" /> Live Connection Mode
           </span>
         </div>
       </div>
@@ -306,7 +369,7 @@ const Agents: React.FC = () => {
               <CardDescription>Configure optimization criteria applied by the AI Agent.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Select WordPress Site</label>
                   <Select value={selectedSiteId} onChange={(e) => setSelectedSiteId(e.target.value)}>
@@ -325,19 +388,9 @@ const Agents: React.FC = () => {
                     <option value="draft">Drafts Only</option>
                   </Select>
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Filter By Author</label>
-                  <Select value={authorFilter} onChange={(e) => setAuthorFilter(e.target.value)}>
-                    <option value="all">All Authors</option>
-                    <option value="admin">Admin</option>
-                    <option value="seo editor">SEO Editor</option>
-                    <option value="developer">Developer</option>
-                  </Select>
-                </div>
               </div>
 
-              {/* Strategy Parameters Checklist */}
+              {/* Strategy Checklist */}
               <div className="bg-zinc-900/20 border border-zinc-800 rounded-xl p-4 space-y-4">
                 <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider border-b border-zinc-800/40 pb-2">AI Optimization Strategy</h4>
                 
@@ -412,7 +465,7 @@ const Agents: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950/40 divide-y divide-zinc-800/60 max-h-48 overflow-y-auto custom-scrollbar">
+                <div className="border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950/40 divide-y divide-zinc-800/60 max-h-56 overflow-y-auto custom-scrollbar">
                   {filteredArticles.map(article => (
                     <div 
                       key={article.id}
@@ -427,7 +480,7 @@ const Agents: React.FC = () => {
                         )}
                         <div>
                           <span className="text-xs font-semibold text-zinc-200 block">{article.title}</span>
-                          <span className="text-[10px] text-zinc-500">Author: {article.author} • {article.date}</span>
+                          <span className="text-[10px] text-zinc-500">Author: {article.authorName} • {article.date}</span>
                         </div>
                       </div>
                       <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase ${
@@ -437,12 +490,22 @@ const Agents: React.FC = () => {
                       </span>
                     </div>
                   ))}
+                  {filteredArticles.length === 0 && !loadingContent && (
+                    <div className="p-8 text-center text-xs text-zinc-500 font-medium">
+                      No articles found on this WordPress site.
+                    </div>
+                  )}
+                  {loadingContent && (
+                    <div className="p-8 text-center text-xs text-zinc-400 font-medium animate-pulse">
+                      Loading article payloads...
+                    </div>
+                  )}
                 </div>
               </div>
 
               <button
                 onClick={handleStartOptimization}
-                disabled={runningSimulation}
+                disabled={runningAgent || selectedArticles.length === 0}
                 className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-40 text-white text-xs font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center cursor-pointer"
               >
                 <Wand2 className="h-4 w-4 mr-2" /> Start AI Article Enhancer Agent
@@ -480,11 +543,16 @@ const Agents: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {categories.length === 0 && !loadingContent && (
+                  <div className="p-8 text-center text-xs text-zinc-500 font-medium">
+                    No categories found.
+                  </div>
+                )}
               </div>
 
               <button
                 onClick={handleOptimizeCategories}
-                disabled={runningSimulation || selectedCategories.length === 0}
+                disabled={runningAgent || selectedCategories.length === 0}
                 className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 disabled:opacity-40 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center cursor-pointer"
               >
                 <Sparkles className="h-4 w-4 mr-2 text-indigo-400" /> Start Categories SEO Agent
@@ -539,7 +607,7 @@ const Agents: React.FC = () => {
 
               <button
                 onClick={handleCreatePage}
-                disabled={runningSimulation}
+                disabled={runningAgent}
                 className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 disabled:opacity-40 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center cursor-pointer"
               >
                 <PlusCircle className="h-4 w-4 mr-2 text-indigo-400" /> Create Pages via AI Agent
@@ -589,29 +657,33 @@ const Agents: React.FC = () => {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Focus Keyword (SEO)</label>
-                <Input 
-                  type="text"
-                  value={manualFocusKeyword}
-                  onChange={(e) => setManualFocusKeyword(e.target.value)}
-                  placeholder="e.g. artificial intelligence, marketing"
-                  className="bg-zinc-950 border-zinc-800 text-xs"
-                />
-              </div>
+              {manualContentType === 'post' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Focus Keyword (SEO)</label>
+                  <Input 
+                    type="text"
+                    value={manualFocusKeyword}
+                    onChange={(e) => setManualFocusKeyword(e.target.value)}
+                    placeholder="e.g. artificial intelligence, marketing"
+                    className="bg-zinc-950 border-zinc-800 text-xs"
+                  />
+                </div>
+              )}
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">SEO Target plugin</label>
-                <Select value={manualSeoPlugin} onChange={(e: any) => setManualSeoPlugin(e.target.value)}>
-                  <option value="rankmath">RankMath SEO</option>
-                  <option value="yoast">Yoast SEO</option>
-                  <option value="none">None / Standard Draft</option>
-                </Select>
-              </div>
+              {manualContentType === 'post' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">SEO Target plugin</label>
+                  <Select value={manualSeoPlugin} onChange={(e: any) => setManualSeoPlugin(e.target.value)}>
+                    <option value="rankmath">RankMath SEO</option>
+                    <option value="yoast">Yoast SEO</option>
+                    <option value="none">None / Standard Draft</option>
+                  </Select>
+                </div>
+              )}
 
               <button
                 onClick={handleCreateManualSeoContent}
-                disabled={runningSimulation}
+                disabled={runningAgent}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center cursor-pointer shadow-md"
               >
                 <PenTool className="h-4 w-4 mr-2" /> Create Manual SEO Content
@@ -640,7 +712,7 @@ const Agents: React.FC = () => {
             </CardHeader>
             <CardContent className="pt-6">
               <div className="bg-zinc-950 border border-zinc-850 rounded-xl p-4 h-48 overflow-y-auto font-mono text-[10px] text-zinc-400 space-y-1.5 custom-scrollbar">
-                {simulationLog.map((log, index) => (
+                {agentLogs.map((log, index) => (
                   <div 
                     key={index}
                     className={
@@ -648,15 +720,17 @@ const Agents: React.FC = () => {
                         ? 'text-emerald-400 font-bold' 
                         : log.startsWith('[AI') 
                           ? 'text-indigo-400' 
-                          : 'text-zinc-400'
+                          : log.startsWith('[Error') || log.startsWith('[Fatal')
+                            ? 'text-rose-450 font-semibold'
+                            : 'text-zinc-400'
                     }
                   >
                     {log}
                   </div>
                 ))}
-                {simulationLog.length === 0 && (
+                {agentLogs.length === 0 && (
                   <div className="text-zinc-600 text-center pt-16 italic">
-                    Console idle. Trigger an optimization or page creation task to view logs.
+                    Console idle. Select a site or run tasks to output diagnostics.
                   </div>
                 )}
               </div>

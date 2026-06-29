@@ -480,3 +480,118 @@ export async function getWordPressCategories(
     throw new Error(error.response?.data?.message || error.message || 'Failed to fetch categories from WordPress REST API');
   }
 }
+
+/**
+ * Fetches existing articles/posts from WordPress site.
+ */
+export async function getWordPressArticles(
+  config: WordPressSiteConfig,
+  params: { status?: string; author?: string; per_page?: number } = {}
+): Promise<{ id: number; title: string; status: string; authorName: string; date: string }[]> {
+  try {
+    const response = await makeWordPressRequest(config, '/wp/v2/posts', {
+      method: 'get',
+      params: {
+        status: params.status || 'any',
+        per_page: params.per_page || 50,
+        _embed: 'author'
+      }
+    });
+
+    if (Array.isArray(response.data)) {
+      return response.data.map((post: any) => {
+        let authorName = 'Admin';
+        const embeddedAuthor = post._embedded?.author?.[0];
+        if (embeddedAuthor?.name) {
+          authorName = embeddedAuthor.name;
+        }
+        return {
+          id: post.id,
+          title: post.title?.rendered || 'Untitled',
+          status: post.status,
+          authorName,
+          date: post.date ? post.date.substring(0, 10) : ''
+        };
+      });
+    }
+    return [];
+  } catch (error: any) {
+    console.error(`[WordPress] Fetching articles failed:`, error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch articles');
+  }
+}
+
+/**
+ * Updates an existing WordPress post/article content and meta.
+ */
+export async function updateWordPressArticle(
+  config: WordPressSiteConfig,
+  postId: number,
+  payload: { title?: string; content?: string; meta?: any }
+): Promise<boolean> {
+  try {
+    await makeWordPressRequest(config, `/wp/v2/posts/${postId}`, {
+      method: 'post',
+      data: payload,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    return true;
+  } catch (error: any) {
+    console.error(`[WordPress] Updating article ${postId} failed:`, error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to update article');
+  }
+}
+
+/**
+ * Creates a static page on WordPress.
+ */
+export async function createWordPressPage(
+  config: WordPressSiteConfig,
+  payload: { title: string; content: string; status?: string }
+): Promise<{ id: number; url: string }> {
+  try {
+    const response = await makeWordPressRequest(config, '/wp/v2/pages', {
+      method: 'post',
+      data: {
+        title: payload.title,
+        content: payload.content,
+        status: payload.status || 'draft'
+      },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    return {
+      id: response.data?.id,
+      url: response.data?.link
+    };
+  } catch (error: any) {
+    console.error(`[WordPress] Page creation failed:`, error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to create page');
+  }
+}
+
+/**
+ * Updates an existing WordPress category metadata.
+ */
+export async function updateWordPressCategory(
+  config: WordPressSiteConfig,
+  catId: number,
+  payload: { name?: string; description?: string; meta?: any }
+): Promise<boolean> {
+  try {
+    await makeWordPressRequest(config, `/wp/v2/categories/${catId}`, {
+      method: 'post',
+      data: payload,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    return true;
+  } catch (error: any) {
+    console.error(`[WordPress] Updating category ${catId} failed:`, error.message);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to update category');
+  }
+}

@@ -1,9 +1,18 @@
 import { app, BrowserWindow, ipcMain, shell, Menu, MenuItem } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import axios from 'axios';
 import { initDatabase, closeDatabase, dbAll, dbRun, dbGet } from './database/connection';
 import { encrypt, decrypt } from './services/security';
-import { testWordPressConnection, getWordPressCategories } from './services/wordpress';
+import { 
+  testWordPressConnection, 
+  getWordPressCategories, 
+  getWordPressArticles, 
+  updateWordPressArticle, 
+  createWordPressPage, 
+  updateWordPressCategory 
+} from './services/wordpress';
+import { generateArticle } from './services/ai';
 import { queueManager } from './services/queue';
 import { scheduler } from './services/scheduler';
 import { setupAutoUpdater } from './services/updater';
@@ -677,6 +686,183 @@ ipcMain.handle('google:listFolders', async (_event, config: any) => {
     const folders = await googleDocsService.listFolders(config);
     return { success: true, folders };
   } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+
+// AI Agents Hub Optimization handlers
+ipcMain.handle('wp:getArticles', async (_event, siteId: number, params: any) => {
+  const site = await dbGet(`SELECT url, username, password FROM websites WHERE id = ?`, [siteId]);
+  if (!site) throw new Error('WordPress site configuration not found');
+  const decryptedPassword = decrypt(site.password);
+  return await getWordPressArticles({
+    url: site.url,
+    username: site.username,
+    password: decryptedPassword
+  }, params);
+});
+
+ipcMain.handle('wp:optimizeArticle', async (_event, siteId: number, postId: number, strategy: any) => {
+  try {
+    const site = await dbGet(`SELECT url, username, password FROM websites WHERE id = ?`, [siteId]);
+    if (!site) throw new Error('WordPress site configuration not found');
+    const decryptedPassword = decrypt(site.password);
+    const wpConfig = {
+      url: site.url,
+      username: site.username,
+      password: decryptedPassword
+    };
+
+    const activeApiKey = (await dbGet(`SELECT provider, key_value, base_url, models FROM api_keys WHERE is_default = 1`))
+      || (await dbGet(`SELECT provider, key_value, base_url, models FROM api_keys ORDER BY id ASC LIMIT 1`));
+    if (!activeApiKey) throw new Error('No AI provider API keys configured. Please add one first.');
+
+    const decryptedKey = decrypt(activeApiKey.key_value);
+    const aiConfig = {
+      provider: activeApiKey.provider,
+      apiKey: decryptedKey,
+      baseUrl: activeApiKey.base_url || undefined
+    };
+    const models = JSON.parse(activeApiKey.models || '[]');
+    const model = models[0] || 'gpt-4o';
+
+    // Fetch the original article from WP
+    const response = await axios.get(`${site.url.replace(/\/$/, '')}/wp-json/wp/v2/posts/${postId}`, {
+      params: { context: 'edit' },
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${site.username}:${decryptedPassword}`).toString('base64')}`
+      }
+    });
+
+    const originalTitle = response.data?.title?.raw || response.data?.title?.rendered || '';
+    const originalContent = response.data?.content?.raw || response.data?.content?.rendered || '';
+
+    // Build the AI optimization request
+    const prompt = `
+Optimize the following WordPress article:
+Title: "${originalTitle}"
+Content:
+${originalContent}
+
+Optimization Strategies to apply:
+- Paragraphs improvement: ${strategy.improveParagraphs ? 'Yes (rewrite sentences for clarity, flow, readability)' : 'No'}
+- Headings alignment: ${strategy.improveHeadings ? 'Yes (optimize subheadings to match high-relevance intents)' : 'No'}
+- SEO Enhancement: ${strategy.autoSeo ? 'Yes (align with Yoast/RankMath keyword focus)' : 'No'}
+
+Return ONLY the optimized HTML body content. Do NOT include markdown code block wrappers (like \`\`\`html) or explanations. Preserve the original post tags, lists, and tables.
+`;
+
+    const genResult = await generateArticle(aiConfig as any, model, prompt);
+    let optimizedContent = genResult.text.replace(/^```html\s*/i, '').replace(/```\s*$/i, '').trim();
+
+    // Push the update back to WordPress
+    await updateWordPressArticle(wpConfig, postId, {
+      content: optimizedContent
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[AI Agent] Optimization handler failed:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('wp:createPage', async (_event, siteId: number, payload: any) => {
+  try {
+    const site = await dbGet(`SELECT url, username, password FROM websites WHERE id = ?`, [siteId]);
+    if (!site) throw new Error('WordPress site configuration not found');
+    const decryptedPassword = decrypt(site.password);
+    const wpConfig = {
+      url: site.url,
+      username: site.username,
+      password: decryptedPassword
+    };
+
+    const activeApiKey = (await dbGet(`SELECT provider, key_value, base_url, models FROM api_keys WHERE is_default = 1`))
+      || (await dbGet(`SELECT provider, key_value, base_url, models FROM api_keys ORDER BY id ASC LIMIT 1`));
+    if (!activeApiKey) throw new Error('No AI provider API keys configured.');
+
+    const decryptedKey = decrypt(activeApiKey.key_value);
+    const aiConfig = {
+      provider: activeApiKey.provider,
+      apiKey: decryptedKey,
+      baseUrl: activeApiKey.base_url || undefined
+    };
+    const models = JSON.parse(activeApiKey.models || '[]');
+    const model = models[0] || 'gpt-4o';
+
+    const prompt = `
+Create a high-quality professional WordPress static page with:
+Title: "${payload.title}"
+Template/Target: "${payload.template}"
+Design Style: "${payload.layout}"
+
+Ensure the copy contains standard page layouts, headers, and section structure using clean HTML elements. Return ONLY the HTML content. Do NOT wrap in \`\`\`html or include explanations.
+`;
+
+    const genResult = await generateArticle(aiConfig as any, model, prompt);
+    let pageContent = genResult.text.replace(/^```html\s*/i, '').replace(/```\s*$/i, '').trim();
+
+    const result = await createWordPressPage(wpConfig, {
+      title: payload.title,
+      content: pageContent,
+      status: 'draft'
+    });
+
+    return { success: true, url: result.url };
+  } catch (err: any) {
+    console.error('[AI Agent] Page creation handler failed:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('wp:optimizeCategories', async (_event, siteId: number, categoryIds: number[]) => {
+  try {
+    const site = await dbGet(`SELECT url, username, password FROM websites WHERE id = ?`, [siteId]);
+    if (!site) throw new Error('WordPress site configuration not found');
+    const decryptedPassword = decrypt(site.password);
+    const wpConfig = {
+      url: site.url,
+      username: site.username,
+      password: decryptedPassword
+    };
+
+    const activeApiKey = (await dbGet(`SELECT provider, key_value, base_url, models FROM api_keys WHERE is_default = 1`))
+      || (await dbGet(`SELECT provider, key_value, base_url, models FROM api_keys ORDER BY id ASC LIMIT 1`));
+    if (!activeApiKey) throw new Error('No AI provider API keys configured.');
+
+    const decryptedKey = decrypt(activeApiKey.key_value);
+    const aiConfig = {
+      provider: activeApiKey.provider,
+      apiKey: decryptedKey,
+      baseUrl: activeApiKey.base_url || undefined
+    };
+    const models = JSON.parse(activeApiKey.models || '[]');
+    const model = models[0] || 'gpt-4o';
+
+    for (const catId of categoryIds) {
+      const res = await axios.get(`${site.url.replace(/\/$/, '')}/wp-json/wp/v2/categories/${catId}`, {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${site.username}:${decryptedPassword}`).toString('base64')}`
+        }
+      });
+      const originalName = res.data?.name || '';
+
+      const prompt = `
+Generate a professional, high-converting SEO description of 50-80 words for the WordPress category named: "${originalName}". Make it engaging and rich in semantic search terms. Return ONLY the description text itself. Do not include quotes or markdown.
+`;
+
+      const genResult = await generateArticle(aiConfig as any, model, prompt);
+      const generatedDescription = genResult.text.trim();
+
+      await updateWordPressCategory(wpConfig, catId, {
+        description: generatedDescription
+      });
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[AI Agent] Category optimization failed:', err.message);
     return { success: false, error: err.message };
   }
 });
