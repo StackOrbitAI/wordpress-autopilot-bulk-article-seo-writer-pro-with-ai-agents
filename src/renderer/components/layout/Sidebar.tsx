@@ -34,6 +34,14 @@ interface ChangelogEntry {
 
 const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.0.56',
+    date: '2026-06-29',
+    type: 'fix',
+    changes: [
+      'Removed deprecated libasound2 and redundant GTK dependency links to ensure seamless compilation on Ubuntu 24.04 Actions.'
+    ]
+  },
+  {
     version: '1.0.55',
     date: '2026-06-29',
     type: 'fix',
