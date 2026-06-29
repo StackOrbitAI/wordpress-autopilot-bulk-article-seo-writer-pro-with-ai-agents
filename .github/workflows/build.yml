@@ -25,7 +25,7 @@ jobs:
           - os: macos-latest
             container: null
           - os: ubuntu-latest
-            container: node:20-bullseye
+            container: null
 
     steps:
       - name: Checkout Code
@@ -45,8 +45,8 @@ jobs:
       - name: Install System Dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
             libgtk-3-0 \
             libnss3 \
             libasound2 \

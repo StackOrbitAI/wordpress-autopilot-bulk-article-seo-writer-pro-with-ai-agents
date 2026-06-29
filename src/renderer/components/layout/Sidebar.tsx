@@ -34,6 +34,14 @@ interface ChangelogEntry {
 
 const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.0.55',
+    date: '2026-06-29',
+    type: 'fix',
+    changes: [
+      'Migrated Linux builder actions to host environments to avoid bullseye container apt GPG validation failures.'
+    ]
+  },
+  {
     version: '1.0.54',
     date: '2026-06-29',
     type: 'major',
