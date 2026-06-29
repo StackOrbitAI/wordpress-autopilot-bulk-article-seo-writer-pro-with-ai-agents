@@ -134,3 +134,133 @@
   );
   animation: shine 1.8s infinite;
 }
+
+/* Light Mode Compatibility Overrides for Zinc classes */
+html.light,
+.light {
+  background-color: #ffffff;
+  color: #18181b;
+}
+
+html.light body {
+  background-color: #fcfcfc;
+  color: #18181b;
+}
+
+/* Override background colors */
+html.light .bg-zinc-950,
+html.light .bg-zinc-950\/80,
+html.light .bg-zinc-950\/50,
+html.light .bg-zinc-950\/40 {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-zinc-900,
+html.light .bg-zinc-900\/50,
+html.light .bg-zinc-900\/40,
+html.light .bg-zinc-900\/30,
+html.light .bg-zinc-900\/20,
+html.light .bg-zinc-900\/10 {
+  background-color: #f4f4f5 !important; /* zinc-100 */
+}
+
+html.light .bg-zinc-800,
+html.light .bg-zinc-850,
+html.light .bg-zinc-800\/40,
+html.light .bg-zinc-800\/50 {
+  background-color: #e4e4e7 !important; /* zinc-200 */
+}
+
+html.light .bg-zinc-900\/40.border-zinc-800 {
+  background-color: #f4f4f5 !important;
+}
+
+/* Hover overrides */
+html.light .hover\:bg-zinc-900:hover,
+html.light .hover\:bg-zinc-850:hover,
+html.light .hover\:bg-zinc-800:hover {
+  background-color: #e4e4e7 !important;
+}
+
+/* Border overrides */
+html.light .border-zinc-800,
+html.light .border-zinc-800\/40,
+html.light .border-zinc-800\/60,
+html.light .border-zinc-700,
+html.light .border-zinc-700\/40 {
+  border-color: #e4e4e7 !important; /* zinc-200 */
+}
+
+/* Text overrides */
+html.light .text-zinc-100,
+html.light .text-zinc-200,
+html.light .text-zinc-300 {
+  color: #18181b !important; /* zinc-900 */
+}
+
+html.light .text-zinc-400,
+html.light .text-zinc-500 {
+  color: #52525b !important; /* zinc-600 */
+}
+
+html.light .text-zinc-500 {
+  color: #71717a !important; /* zinc-500 */
+}
+
+html.light .text-indigo-400 {
+  color: #4f46e5 !important; /* indigo-600 */
+}
+
+html.light .bg-gradient-to-r.from-zinc-50.to-zinc-300 {
+  background-image: linear-gradient(to right, #18181b, #3f3f46) !important;
+}
+
+/* Inputs, textareas, selects */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  border-color: #d4d4d8 !important; /* zinc-300 */
+}
+
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-color: #4f46e5 !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #a1a1aa !important; /* zinc-400 */
+}
+
+/* Category Badges, Cards, etc. */
+html.light .bg-zinc-900\/40 .text-zinc-300 {
+  color: #18181b !important;
+}
+
+html.light .bg-indigo-500\/10 {
+  background-color: rgba(79, 70, 229, 0.08) !important;
+}
+
+html.light .text-emerald-400 {
+  color: #059669 !important; /* emerald-600 */
+}
+
+html.light .text-amber-400 {
+  color: #d97706 !important; /* amber-600 */
+}
+
+html.light .text-rose-400 {
+  color: #e11d48 !important; /* rose-600 */
+}
+
+/* Scrollbars */
+html.light ::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
