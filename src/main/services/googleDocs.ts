@@ -94,7 +94,8 @@ class GoogleDocsService {
           scope: [
             'https://www.googleapis.com/auth/documents',
             'https://www.googleapis.com/auth/drive.file',
-            'https://www.googleapis.com/auth/spreadsheets'
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/userinfo.email'
           ]
         });
 
@@ -177,9 +178,17 @@ class GoogleDocsService {
         return { success: true, email: credentials.client_email };
       } else {
         // OAuth2 flow
-        const oauth2 = google.oauth2({ version: 'v2', auth });
-        const userInfo = await oauth2.userinfo.get();
-        return { success: true, email: userInfo.data.email || 'Authenticated Account' };
+        let email = 'Authenticated Account';
+        try {
+          const oauth2 = google.oauth2({ version: 'v2', auth });
+          const userInfo = await oauth2.userinfo.get();
+          email = userInfo.data.email || email;
+        } catch (e: any) {
+          console.warn('[Google API] Could not get user info (likely missing userinfo.email scope). Fallback to drive.files.list.', e.message);
+          // Fallback test to ensure token is valid for Drive
+          await drive.files.list({ pageSize: 1, fields: 'files(id)' });
+        }
+        return { success: true, email };
       }
     } catch (err: any) {
       console.error('[Google API] Connection test failed:', err);
