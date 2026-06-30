@@ -2,7 +2,14 @@
 
 StackOrbitAI Bulk Writer Pro is a production-ready, enterprise-grade cross-platform desktop application (Windows and macOS) built for automated, high-quality, bulk WordPress article generation and publishing. 
 
-It integrates with multiple LLM providers (OpenAI, Google Gemini, Anthropic Claude, OpenRouter, and custom endpoints) and features a concurrent background queue system, dynamic SEO metadata population (Yoast/RankMath compatible), and automatic updates via private GitHub Releases.
+It integrates with multiple LLM providers (OpenAI, Google Gemini, Anthropic Claude, OpenRouter, and custom endpoints) and features a concurrent background queue system, dynamic SEO metadata population (Yoast/RankMath compatible), and automatic updates via GitHub Releases.
+
+### 🆕 Latest Features in v1.0.63
+* **Multimodal Vision Image Selector**: Stock photo candidates (from Unsplash, Pexels, and Pixabay) are visually analyzed by Vision-capable LLMs to choose the most thematic and visually aligned featured image matching your article topic.
+* **Auto-Resolution Rounding**: Solves Runware.ai Stable Diffusion / FLUX API compatibility by automatically rounding custom sizes (e.g. `1200x628` or `1200x630`) to the nearest multiple of 64 (e.g. `1216x640`), preventing dimension-related API execution failures.
+* **Robust Keyword & Topic Enforcement**: Substitutes template placeholders case-insensitively, handles missing curly braces via literal replacements, and injects a confidential system constraint so AI agents never write mismatched topics.
+* **In-Session Image Deduplication & Concurrency Lock**: Eliminates duplicate images across bulk articles by caching used stock URLs and appending random suffixes to download filenames to prevent concurrent worker write clashes.
+* **AdSense & E-E-A-T Default Prompt Template**: Pre-seeded with a comprehensive, professional blog generation template optimized for Google helpful content standards and AdSense approval.
 
 ---
 
@@ -21,7 +28,7 @@ It integrates with multiple LLM providers (OpenAI, Google Gemini, Anthropic Clau
 * **Image Generator & Media Sync**: Integrated DALL-E 3 image generation (photorealistic, natural aspect ratios) with automatic upload to WordPress media libraries as the post's Featured Image.
 * **SEO Metadata Mappings**: Direct synchronization with Yoast SEO, RankMath, or All in One SEO metadata fields (meta title, description, focus keywords, tags, slug).
 * **Local Express REST Server**: Exposes a local REST API endpoint on Port 4890 to remotely queue tasks from third-party tools (Zapier, Make, Chrome Extension).
-* **Auto-Updates**: Secure updater powered by `electron-updater` mapping private GitHub Releases with zero-touch background installations.
+* **Auto-Updates**: Secure updater powered by `electron-updater` mapping public GitHub Releases with zero-touch background installations.
 
 ---
 
@@ -163,29 +170,27 @@ When the application is running, a local web server is launched in the backgroun
 
 ---
 
-## 🚀 CI/CD & Private Auto-Updater
+## 🚀 CI/CD & Auto-Updater
 
-The application features fully automated updates pulled from private GitHub releases.
+The application features fully automated updates pulled from public GitHub releases.
 
 ### GitHub Actions Pipeline
 The included workflow in `.github/workflows/build.yml` executes on tags:
 1. Push a version tag:
    ```bash
-   git tag v1.0.0
-   git push origin v1.0.5
+   git tag v1.0.63
+   git push origin v1.0.63
    ```
-2. The pipeline checks out the project, installs dependencies, compiles assets, packages the binaries, and posts them to your private repository releases list.
+2. The pipeline checks out the project, installs dependencies, compiles assets, packages the binaries, and posts them to your repository releases list.
 
-### Private Repository Updates Configuration
-To support updates from private repositories, ensure you have a GitHub Personal Access Token (PAT) with `repo` scope.
-1. Add the PAT to your environment or configure it in the Electron main updater handler.
-2. Ensure the `publish` block in `package.json` matches your organization and repo name:
+### Repository Updates Configuration
+Ensure the `publish` block in `package.json` matches your organization and repo name:
    ```json
    "publish": {
      "provider": "github",
-     "owner": "your-github-username",
-     "repo": "your-private-repo-name",
-     "private": true
+     "owner": "StackOrbitAI",
+     "repo": "stackorbitai-wordpress-autopilot-bulk-article-seo-writer-pro-with-ai-agents",
+     "private": false
    }
    ```
 3. The app will automatically check for updates on boot, download them silently, and alert the user with a restart trigger once downloaded.
