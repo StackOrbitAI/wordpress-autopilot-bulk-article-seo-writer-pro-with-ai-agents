@@ -28,7 +28,7 @@ const Settings: React.FC = () => {
   const [unsplashApiKey, setUnsplashApiKey] = useState('');
   const [pixabayApiKey, setPixabayApiKey] = useState('');
   const [runwareApiKey, setRunwareApiKey] = useState('');
-  const [runwareCustomModels, setRunwareCustomModels] = useState('cblas-flux-1-schnell, runware:100, civitai:102438@133677');
+  const [runwareCustomModels, setRunwareCustomModels] = useState('runware:100@1, runware:101@1, civitai:102438@133677');
   
   // Google Docs Integration States
   const [googleAuthType, setGoogleAuthType] = useState('oauth');
@@ -407,7 +407,7 @@ const Settings: React.FC = () => {
                     type="text" 
                     value={runwareCustomModels} 
                     onChange={(e) => setRunwareCustomModels(e.target.value)} 
-                    placeholder="cblas-flux-1-schnell, runware:100, civitai:102438@133677" 
+                    placeholder="runware:100@1, runware:101@1, civitai:102438@133677" 
                     className="bg-zinc-950 border-zinc-800 text-xs"
                   />
                   <p className="text-[9px] text-zinc-500">
@@ -650,7 +650,12 @@ const Settings: React.FC = () => {
               {loadingFolders ? (
                 <p className="text-zinc-500 text-xs py-10 text-center animate-pulse">Scanning Google Drive folders...</p>
               ) : folders.length === 0 ? (
-                <p className="text-zinc-500 text-xs py-10 text-center italic">No folders found in Google Drive root.</p>
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-zinc-500 text-xs italic">No folders found in Google Drive.</p>
+                  <p className="text-[10px] text-zinc-500 px-4 leading-relaxed">
+                    Note: If you are using a Service Account, you must share your Google Drive folder(s) with the Service Account email address first (listed in your JSON key or settings).
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
                   {folders.map(f => (

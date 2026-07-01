@@ -113,7 +113,7 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
   const [inlineImagesCount, setInlineImagesCount] = useState<number>(3);
   const [inlineImagesParagraphInterval, setInlineImagesParagraphInterval] = useState<number>(3);
   const [customImageSize, setCustomImageSize] = useState<string>('');
-  const [runwareModelsList, setRunwareModelsList] = useState<string[]>(['cblas-flux-1-schnell', 'runware:100', 'civitai:102438@133677']);
+  const [runwareModelsList, setRunwareModelsList] = useState<string[]>(['runware:100@1', 'runware:101@1', 'civitai:102438@133677']);
   const [articleLength, setArticleLength] = useState('medium');
   const [publishingMode, setPublishingMode] = useState<'draft' | 'pending' | 'publish' | 'future'>('publish');
   const [publishTargetWp, setPublishTargetWp] = useState(true);
@@ -1365,8 +1365,8 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
                   const val = parseInt(e.target.value, 10);
                   setImageGeneration(val);
                   if (val === 100 && (imageModel === 'gpt-image-2' || !imageModel)) {
-                    setImageModel('cblas-flux-1-schnell');
-                  } else if (val === 1 && (imageModel === 'cblas-flux-1-schnell' || !imageModel)) {
+                    setImageModel('runware:100@1');
+                  } else if (val === 1 && (imageModel === 'runware:100@1' || !imageModel)) {
                     setImageModel('gpt-image-2');
                   }
                 }}>
@@ -2184,7 +2184,12 @@ const Tasks: React.FC<TasksProps> = ({ onNavigate }) => {
               {loadingFolders ? (
                 <p className="text-zinc-500 text-xs py-10 text-center animate-pulse">Scanning Google Drive folders...</p>
               ) : folders.length === 0 ? (
-                <p className="text-zinc-500 text-xs py-10 text-center italic">No folders found in Google Drive root.</p>
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-zinc-500 text-xs italic">No folders found in Google Drive.</p>
+                  <p className="text-[10px] text-zinc-500 px-4 leading-relaxed">
+                    Note: If you are using a Service Account, you must share your Google Drive folder(s) with the Service Account email address first (listed in settings or JSON key).
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
                   {folders.map(f => (

@@ -291,7 +291,7 @@ class QueueManager {
 
     if (initialMode === 1) { // DALL-E
       modesToTry.push({ mode: 1, isAI: true, model: parsedModel, style: parsedStyle });
-      modesToTry.push({ mode: 100, isAI: true, model: 'cblas-flux-1-schnell', style: parsedStyle });
+      modesToTry.push({ mode: 100, isAI: true, model: 'runware:100@1', style: parsedStyle });
       modesToTry.push({ mode: 101, isAI: true, model: 'imagen-3.0-generate-002', style: parsedStyle });
       modesToTry.push({ mode: 3, isAI: false }); // Unsplash
       modesToTry.push({ mode: 2, isAI: false }); // Pexels
@@ -301,7 +301,7 @@ class QueueManager {
       // As requested, no fallback for Runware
     } else if (initialMode === 101) { // Gemini Imagen
       modesToTry.push({ mode: 101, isAI: true, model: parsedModel, style: parsedStyle });
-      modesToTry.push({ mode: 100, isAI: true, model: 'cblas-flux-1-schnell', style: parsedStyle });
+      modesToTry.push({ mode: 100, isAI: true, model: 'runware:100@1', style: parsedStyle });
       modesToTry.push({ mode: 1, isAI: true, model: 'gpt-image-2', style: parsedStyle });
       modesToTry.push({ mode: 4, isAI: false }); // Pixabay
       modesToTry.push({ mode: 3, isAI: false }); // Unsplash
@@ -311,7 +311,7 @@ class QueueManager {
       modesToTry.push({ mode: 3, isAI: false });
       modesToTry.push({ mode: 2, isAI: false });
       modesToTry.push({ mode: 4, isAI: false });
-      modesToTry.push({ mode: 100, isAI: true, model: 'cblas-flux-1-schnell', style: parsedStyle });
+      modesToTry.push({ mode: 100, isAI: true, model: 'runware:100@1', style: parsedStyle });
     }
 
     for (const attempt of modesToTry) {
@@ -1056,6 +1056,10 @@ function markdownToHtml(markdown: string): string {
   // Normalize Windows/macOS line endings
   let html = markdown.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
+  // Clean up cases where headings are wrapped in bold markdown (e.g. "## **Heading**")
+  html = html.replace(/^[ \t]*(#+)[ \t]*\*\*(.*?)\*\*[ \t]*$/gm, '$1 $2');
+  html = html.replace(/^[ \t]*\*\*(#+)[ \t]*(.*?)\*\*[ \t]*$/gm, '$1 $2');
+
   // Code blocks
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
   
@@ -1070,13 +1074,13 @@ function markdownToHtml(markdown: string): string {
   html = html.replace(/^[ \t]*##[ \t]+([^\n]+?)[ \t]*$/gm, '<h2>$1</h2>');
   html = html.replace(/^[ \t]*#[ \t]+([^\n]+?)[ \t]*$/gm, '<h1>$1</h1>');
 
-  // Bold (**bold** and __bold__)
-  html = html.replace(/\*\*([^\n*]+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/__([^\n_]+?)__/g, '<strong>$1</strong>');
+  // Bold (**bold** and __bold__) - using non-greedy matching to support nested formatting
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
   
-  // Italic (*italic* and _italic_)
-  html = html.replace(/\*([^\n*]+?)\*/g, '<em>$1</em>');
-  html = html.replace(/_([^\n_]+?)_/g, '<em>$1</em>');
+  // Italic (*italic* and _italic_) - using non-greedy matching
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
 
   // Links
   html = html.replace(/\[([^\n\]]+?)\]\(([^\n)]+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');

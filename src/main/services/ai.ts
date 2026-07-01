@@ -1,6 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { app } from 'electron';
 import { decrypt } from './security';
 import { dbGet } from '../database/connection';
@@ -287,6 +288,12 @@ export async function generateRunwareImage(
 ): Promise<string> {
   const url = 'https://api.runware.ai/v1';
 
+  // Map legacy/invalid model IDs to the correct FLUX.1 [schnell] curated ID
+  let actualModel = modelName;
+  if (modelName === 'cblas-flux-1-schnell' || modelName === 'runware:100') {
+    actualModel = 'runware:100@1';
+  }
+
   let width = 1024;
   let height = 768;
   if (size === '1200x628') {
@@ -317,11 +324,11 @@ export async function generateRunwareImage(
     },
     {
       taskType: 'imageInference',
-      taskUUID: `task_${Date.now()}`,
+      taskUUID: crypto.randomUUID(),
       positivePrompt: prompt,
       width: width,
       height: height,
-      model: modelName,
+      model: actualModel,
       numberResults: 1
     }
   ];
